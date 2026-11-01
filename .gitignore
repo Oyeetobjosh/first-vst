@@ -1,0 +1,12 @@
+# Build directories
+/build*/
+
+# Built plug-ins (per platform)
+/FirstVSTDelay.so
+/FirstVSTDelay.vst
+/FirstVSTDelay.dll
+
+# Editor/IDE noise
+*.swp
+.vscode/
+.idea/
