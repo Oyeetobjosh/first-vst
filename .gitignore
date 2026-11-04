@@ -1,0 +1,24 @@
+# Build directories
+/build*/
+
+# Built plug-ins (per platform)
+/FirstVSTDelay.so
+/FirstVSTDelay.vst
+/FirstVSTDelay.dll
+
+# Editor/IDE noise
+*.swp
+.vscode/
+.idea/
+
+# Local tooling (cmake venv etc.)
+.tools/
+
+# Tobjosh Reverb built plug-ins
+/TobjoshReverb.so
+/TobjoshReverb.vst
+/TobjoshReverb.dll
+
+# UI screenshot artifacts
+*.ppm
+*.png
