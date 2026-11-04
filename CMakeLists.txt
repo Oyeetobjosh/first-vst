@@ -59,7 +59,50 @@ elseif (WIN32)
 endif ()
 
 #--------------------------------------------------------------------------------------
-# Headless test host
+# Tobjosh Reverb — 360° room-audio reverb plug-in
+#
+# Built from three parts:
+#   src/reverb  : the FDN reverb engine (pure DSP, no VST dependencies)
+#   src/gui     : the self-contained UI framework (rasterizer, controls, editor)
+#   src/TobjoshReverb.* : the VST 2.4 AudioEffectX wrapper
+#--------------------------------------------------------------------------------------
+add_library (TobjoshReverb SHARED
+    src/TobjoshReverb.cpp
+    src/tobjosh_plugin_main.cpp
+    src/reverb/ReverbEngine.cpp
+    src/gui/Raster.cpp
+    src/gui/Controls.cpp
+    src/gui/ReverbUI.cpp
+    src/gui/Editor.cpp
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x/audioeffect.cpp
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x/audioeffectx.cpp
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x/vstplugmain.cpp
+)
+
+target_include_directories (TobjoshReverb PRIVATE
+    ${VST2_SDK_DIR}
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+set_target_properties (TobjoshReverb PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "TobjoshReverb"
+)
+if (APPLE)
+    set_target_properties (TobjoshReverb PROPERTIES SUFFIX ".vst")
+elseif (WIN32)
+    set_target_properties (TobjoshReverb PROPERTIES SUFFIX ".dll")
+endif ()
+
+if (APPLE)
+    # macOS editor window (Cocoa bridge, ObjC++)
+    set_source_files_properties (src/gui/EditorMac.mm PROPERTIES COMPILE_FLAGS "-x objective-c++")
+    target_sources (TobjoshReverb PRIVATE src/gui/EditorMac.mm)
+endif ()
+
+#--------------------------------------------------------------------------------------
+# Headless test hosts
 #--------------------------------------------------------------------------------------
 add_executable (vst-host-test host-test/host_test.cpp)
 
@@ -76,6 +119,48 @@ if (UNIX AND NOT APPLE)
     target_link_libraries (vst-host-test PRIVATE ${DL_LIB})
 endif ()
 
+# Tobjosh Reverb audio host test
+add_executable (tobjosh-host-test host-test/tobjosh_host_test.cpp)
+
+target_include_directories (tobjosh-host-test PRIVATE
+    ${VST2_SDK_DIR}
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x
+)
+
+if (UNIX AND NOT APPLE)
+    target_link_libraries (tobjosh-host-test PRIVATE ${DL_LIB})
+endif ()
+
+# Tobjosh Reverb headless UI test (drives the editor + UI framework directly)
+add_executable (ui-test host-test/ui_test.cpp
+    src/reverb/ReverbEngine.cpp
+    src/gui/Raster.cpp
+    src/gui/Controls.cpp
+    src/gui/ReverbUI.cpp
+    src/gui/Editor.cpp
+)
+
+target_include_directories (ui-test PRIVATE
+    ${VST2_SDK_DIR}
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# Tobjosh Reverb UI screenshot tool (renders the headless editor to a PPM)
+add_executable (ui-shot host-test/ui_shot.cpp
+    src/reverb/ReverbEngine.cpp
+    src/gui/Raster.cpp
+    src/gui/Controls.cpp
+    src/gui/ReverbUI.cpp
+    src/gui/Editor.cpp
+)
+
+target_include_directories (ui-shot PRIVATE
+    ${VST2_SDK_DIR}
+    ${VST2_SDK_DIR}/public.sdk/source/vst2.x
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 #--------------------------------------------------------------------------------------
 # Testing
 #--------------------------------------------------------------------------------------
@@ -86,7 +171,21 @@ add_test (
     COMMAND vst-host-test $<TARGET_FILE:FirstVSTDelay>
 )
 
-add_custom_target (check DEPENDS vst-host-test FirstVSTDelay
+add_test (
+    NAME tobjosh-reverb-host-test
+    COMMAND tobjosh-host-test $<TARGET_FILE:TobjoshReverb>
+)
+
+add_test (
+    NAME tobjosh-reverb-ui-test
+    COMMAND ui-test
+)
+
+add_custom_target (check DEPENDS vst-host-test tobjosh-host-test ui-test FirstVSTDelay TobjoshReverb
     COMMAND ${CMAKE_COMMAND} -E echo "Running FirstVSTDelay host test..."
     COMMAND vst-host-test $<TARGET_FILE:FirstVSTDelay>
+    COMMAND ${CMAKE_COMMAND} -E echo "Running Tobjosh Reverb host test..."
+    COMMAND tobjosh-host-test $<TARGET_FILE:TobjoshReverb>
+    COMMAND ${CMAKE_COMMAND} -E echo "Running Tobjosh Reverb UI test..."
+    COMMAND ui-test
 )

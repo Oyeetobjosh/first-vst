@@ -10,3 +10,15 @@
 *.swp
 .vscode/
 .idea/
+
+# Local tooling (cmake venv etc.)
+.tools/
+
+# Tobjosh Reverb built plug-ins
+/TobjoshReverb.so
+/TobjoshReverb.vst
+/TobjoshReverb.dll
+
+# UI screenshot artifacts
+*.ppm
+*.png
